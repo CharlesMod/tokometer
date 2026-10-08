@@ -15,9 +15,3 @@ export type TokometerGauge = {
   isLearning: boolean
   mode: TokometerMode
 }
-
-declare module 'claude-code' {
-  interface PluginState {
-    tokometer: { gauge: TokometerGauge }
-  }
-}

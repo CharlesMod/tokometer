@@ -3,7 +3,6 @@ import { expect, mock, test } from 'claude-code/testing'
 test('a streamed response moves the gauge, and it drops to zero when the stream ends', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   mock.store(on)
-  mock.env(on, {})
   on('command.register', () => ({ value: { command: 'tokometer' } }))
   on('session.start', (_$, e) => ({ sessionId: 's1', cwd: e.cwd }) as never)
   on('session.id', () => ({ value: 's1' }) as never)
@@ -59,7 +58,6 @@ test('a rate above the usual 95th percentile is red and bold', async ($, on) => 
   const hours = new Array(96).fill(0)
   hours[26] = 3600
   mock.store(on, { schema: 3, histograms: { everything: hours, generated: hours } })
-  mock.env(on, {})
   on('command.register', () => ({ value: { command: 'tokometer' } }))
   on('session.start', (_$, e) => ({ sessionId: 's1', cwd: e.cwd }) as never)
   on('session.id', () => ({ value: 's1' }) as never)

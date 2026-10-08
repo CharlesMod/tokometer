@@ -7,16 +7,17 @@ import type { TokometerGauge, TokometerMode } from '../types'
 // call arguments) is counted as it arrives and squared with the API's own
 // usage figures when the response ends; input (uncached, cache writes, cache
 // reads) is spread over the request's life instead of landing as one spike.
-// Each session shares its live rate through a small file, so the gauge adds
-// up every local session. The ticker runs once a second while something is
+// Each session shares its live rate under a key of the plugin's own store,
+// so the gauge adds up every local session. The ticker runs once a second while something is
 // moving and drops to one look every 2 s when all is quiet.
-
-const GAUGE = { plugin: 'tokometer', key: 'gauge' } as const
 
 const TICK_MS = 1000
 const IDLE_MS = 2000
 const SHARE_MS = 1000
 const FRESH_MS = 3500
+// A session's key that has not moved in an hour is a session long gone.
+const GONE_MS = 60 * 60 * 1000
+const LIVE_PREFIX = 'live:'
 // The live rate is averaged over about 2.5 s, so the number reads steady.
 const TAU_MS = 2500
 // Characters per token before the first response calibrates it.
@@ -66,8 +67,9 @@ let isTicking = false
 // A one-off request outside a turn's steps keeps the needle up this long.
 let holdUntil = 0
 let written = { rate: -1, band: -1, rank: -1 }
-let liveDir = ''
-let ownFile = ''
+// This session's key in the store, and the latest reading the footer draws.
+let ownKey = ''
+let gauge: TokometerGauge | undefined
 let timer: { cancel: () => void } | undefined
 let timerMs = 0
 
@@ -170,16 +172,15 @@ function schedule($: EngineInterface, ms: number) {
 
 async function readRemote($: EngineInterface, now: number) {
   const sum = { out: 0, in: 0, count: 0 }
-  const entries = await $.fs.list(liveDir).catch(() => [])
-  for (const entry of entries) {
-    const path = `${liveDir}/${entry.name}`
-    if (path === ownFile || !entry.name.endsWith('.json')) continue
-    if (now - entry.mtimeMs > FRESH_MS) continue
-    const shared = await $.fs
-      .read(path)
-      .then(text => JSON.parse(text) as Shared)
-      .catch(() => undefined)
-    if (!shared || now - shared.t > FRESH_MS) continue
+  const keys = await $.store.keys()
+  for (const key of keys) {
+    if (!key.startsWith(LIVE_PREFIX) || key === ownKey) continue
+    const shared = (await $.store.get(key)) as Shared | undefined
+    if (!shared || now - shared.t > GONE_MS) {
+      await $.store.delete(key)
+      continue
+    }
+    if (now - shared.t > FRESH_MS) continue
     sum.out += shared.out
     sum.in += shared.in
     if (shared.out + shared.in > 0.5) sum.count += 1
@@ -213,13 +214,13 @@ async function tick($: EngineInterface) {
     if (!isStreaming) flows.clear()
     const own = rate.out + rate.in
 
-    if (now - lastShare >= SHARE_MS && ownFile !== '' && (own > 0.5 || !isZeroShared)) {
+    if (now - lastShare >= SHARE_MS && ownKey !== '' && (own > 0.5 || !isZeroShared)) {
       lastShare = now
       isZeroShared = own <= 0.5
       const shared: Shared = { t: now, out: rate.out, in: rate.in }
-      void $.fs.write(ownFile, JSON.stringify(shared)).catch(() => undefined)
+      await $.store.set(ownKey, shared)
     }
-    if (now - lastRemote >= SHARE_MS && liveDir !== '') {
+    if (now - lastRemote >= SHARE_MS && ownKey !== '') {
       lastRemote = now
       await readRemote($, now)
     }
@@ -248,7 +249,7 @@ async function tick($: EngineInterface) {
       Math.abs(rank - written.rank) >= 0.05 ||
       (total === 0 && written.rate !== 0)
     if (isWorthDrawing) {
-      const gauge: TokometerGauge = {
+      gauge = {
         rate: total,
         own: mine[mode],
         others: remote.count,
@@ -258,7 +259,7 @@ async function tick($: EngineInterface) {
         mode,
       }
       written = { rate: total, band, rank }
-      await $.state.set(GAUGE, gauge)
+      $.ui.invalidate('ui.render')
     }
 
     const isBusy = inFlight > 0 || flows.size > 0 || total > 0.5 || remote.count > 0
@@ -282,11 +283,7 @@ function spend($: EngineInterface, usage: ModelUsage | undefined) {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    const home = (await $.env.get('HOME')) ?? ''
-    if (home !== '') {
-      liveDir = `${home}/.claude/tokometer/live`
-      ownFile = `${liveDir}/${await $.session.id()}.json`
-    }
+    ownKey = `${LIVE_PREFIX}${await $.session.id()}`
     // 0.1 and 0.2 kept a single peak; 0.3 learns a histogram instead.
     if ((await $.store.get('schema')) !== 3) {
       await $.store.delete('peaks')
@@ -310,10 +307,7 @@ export const register: Register = on => {
   on('session.end', async ($, e, next) => {
     timer?.cancel()
     await save($).catch(() => undefined)
-    if (ownFile !== '') {
-      const shared: Shared = { t: 0, out: 0, in: 0 }
-      await $.fs.write(ownFile, JSON.stringify(shared)).catch(() => undefined)
-    }
+    if (ownKey !== '') await $.store.delete(ownKey).catch(() => undefined)
 
     return next(e)
   })
@@ -422,7 +416,6 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
-    const gauge = (await $.state.get(GAUGE)).value
     if (!gauge) return next(e)
     const modes = e.props.modes.join(' & ')
     const isMoving = gauge.band >= 0
