@@ -82,14 +82,14 @@ function view(m: TokometerMode): number[] {
   return stored[m].map((v, i) => v + (pending[m][i] ?? 0))
 }
 
-function mass(h: readonly number[]): number {
-  return h.reduce((a, b) => a + b, 0)
+function mass(hist: readonly number[]): number {
+  return hist.reduce((a, b) => a + b, 0)
 }
 
 // Where `r` falls among the rates seen: 0 below them all, 1 above.
 function rankOf(m: TokometerMode, r: number): number {
-  const h = view(m)
-  const total = mass(h)
+  const hist = view(m)
+  const total = mass(hist)
   if (total < LEARNED_S) {
     const [p50, p80, p95] = STARTER[m]
     const knots: [number, number][] = [[1, 0], [p50, 0.5], [p80, 0.8], [p95, 0.95], [p95 * 4, 1]]
@@ -106,23 +106,23 @@ function rankOf(m: TokometerMode, r: number): number {
   const at = position(r)
   const bin = Math.floor(at)
   let below = 0
-  for (let i = 0; i < bin; i++) below += h[i] ?? 0
-  below += (h[bin] ?? 0) * (at - bin)
+  for (let i = 0; i < bin; i++) below += hist[i] ?? 0
+  below += (hist[bin] ?? 0) * (at - bin)
 
   return below / total
 }
 
 // The rate at quantile `q` of what has been seen (the starter edges before).
 function quantile(m: TokometerMode, q: number): number {
-  const h = view(m)
-  const total = mass(h)
+  const hist = view(m)
+  const total = mass(hist)
   if (total < LEARNED_S) {
     const [p50, p80, p95] = STARTER[m]
     return q <= 0.5 ? p50 : q <= 0.8 ? p80 : p95
   }
   let run = 0
   for (let i = 0; i < BIN_COUNT; i++) {
-    const v = h[i] ?? 0
+    const v = hist[i] ?? 0
     if (run + v >= q * total && v > 0) {
       return 2 ** ((i + (q * total - run) / v) / BINS_PER_OCTAVE)
     }
