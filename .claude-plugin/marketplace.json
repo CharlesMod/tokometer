@@ -1,5 +1,13 @@
 {
   "name": "tokometer",
-  "owner": { "name": "CharlesMod" },
-  "plugins": [{ "name": "tokometer", "source": "./" }]
+  "description": "tokometer: a token speedometer for Claude Code",
+  "owner": {
+    "name": "CharlesMod"
+  },
+  "plugins": [
+    {
+      "name": "tokometer",
+      "source": "./"
+    }
+  ]
 }

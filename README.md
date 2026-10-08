@@ -11,8 +11,15 @@ A token speedometer for Claude Code. It shows a dial ○◔◑◕● in the prom
 
 ## Install
 
-```
-/plugin install tokometer --marketplace CharlesMod/tokometer
+From a shell:
+
+```bash
+claude plugin marketplace add CharlesMod/tokometer
+claude plugin install tokometer@tokometer
 ```
 
-Answer `y` to add the marketplace, then pick a scope.
+Or from inside a Claude Code session: `/plugin install tokometer --marketplace CharlesMod/tokometer`, answer `y`, then choose the user scope.
+
+## License
+
+MIT

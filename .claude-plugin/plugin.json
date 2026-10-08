@@ -2,6 +2,18 @@
   "name": "tokometer",
   "version": "0.3.0",
   "description": "A token speedometer beside the prompt: live tokens per second across this session, its subagents and every other local Claude Code session, scaled to your all-time peak.",
-  "author": { "name": "CharlesMod" },
-  "types": "./types/index.d.ts"
+  "author": {
+    "name": "CharlesMod"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "repository": "https://github.com/CharlesMod/tokometer",
+  "homepage": "https://github.com/CharlesMod/tokometer",
+  "keywords": [
+    "tokens",
+    "usage",
+    "speedometer",
+    "status",
+    "footer"
+  ]
 }
