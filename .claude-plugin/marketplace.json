@@ -1,0 +1,5 @@
+{
+  "name": "tokometer",
+  "owner": { "name": "CharlesMod" },
+  "plugins": [{ "name": "tokometer", "source": "./" }]
+}
