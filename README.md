@@ -5,7 +5,7 @@ A token speedometer for Claude Code. It shows a dial ○◔◑◕● in the prom
 - **Learning:** each moment of streaming is logged into a histogram on a log scale, shared by all your sessions. Older samples gradually count for less, so the bands follow your habits as they change. Until 30 s of streaming has been logged, the dial uses starter bands. `/tokometer` shows your current band edges, and `/tokometer reset` starts the learning over.
 - **What it counts:** every model request: the main thread, subagents, compaction, and other plugins' completions. Output (text, thinking, tool-call arguments) is counted live as it streams, then corrected to the API's billed figures. Input (uncached, cache writes, cache reads) is spread over each request's duration so it doesn't show up as a spike.
 - **Across sessions:** each session writes its rate to `~/.claude/tokometer/live/`, and the dial adds up every local session.
-- **Light on resources:** the dial updates 4×/s while tokens are moving and checks once every 2 s when idle. It only redraws when the value visibly changes, and SVG animation sweeps the needle smoothly between updates.
+- **Calm and light:** the rate is averaged over about 2.5 s and updates once a second while tokens are flowing. It redraws only when the number moves by 5% or the color changes, drops to 0 the moment streaming stops, and checks once every 2 s when idle.
 
 `/tokometer everything` counts all billed tokens and `/tokometer generated` counts output only. Each mode learns its own bands.
 

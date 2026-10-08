@@ -8,16 +8,17 @@ import type { TokometerGauge, TokometerMode } from '../types'
 // usage figures when the response ends; input (uncached, cache writes, cache
 // reads) is spread over the request's life instead of landing as one spike.
 // Each session shares its live rate through a small file, so the gauge adds
-// up every local session. The ticker runs at 4 Hz only while something is
+// up every local session. The ticker runs once a second while something is
 // moving and drops to one look every 2 s when all is quiet.
 
 const GAUGE = { plugin: 'tokometer', key: 'gauge' } as const
 
-const TICK_MS = 250
+const TICK_MS = 1000
 const IDLE_MS = 2000
-const SHARE_MS = 500
-const FRESH_MS = 2500
-const TAU_MS = 500
+const SHARE_MS = 1000
+const FRESH_MS = 3500
+// The live rate is averaged over about 2.5 s, so the number reads steady.
+const TAU_MS = 2500
 // Characters per token before the first response calibrates it.
 const CHARS_PER_TOKEN = 3.6
 
@@ -242,7 +243,7 @@ async function tick($: EngineInterface) {
     const rank = total > 0.5 ? rankOf(mode, total) : 0
     const band = total > 0.5 ? bandOf(rank) : -1
     const isWorthDrawing =
-      Math.abs(total - written.rate) >= Math.max(1, total * 0.02) ||
+      Math.abs(total - written.rate) >= Math.max(1, total * 0.05) ||
       band !== written.band ||
       Math.abs(rank - written.rank) >= 0.05 ||
       (total === 0 && written.rate !== 0)

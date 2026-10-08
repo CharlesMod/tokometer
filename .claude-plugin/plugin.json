@@ -1,6 +1,6 @@
 {
   "name": "tokometer",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A token speedometer beside the prompt: live tokens per second across this session, its subagents and every other local Claude Code session, scaled to your all-time peak.",
   "author": {
     "name": "CharlesMod"

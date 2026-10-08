@@ -36,7 +36,7 @@ test('a streamed response moves the gauge, and it drops to zero when the stream 
   const stream = $.turn.step({ turnId: 't1', index: 0, model: 'claude-opus-5-5', messageCount: 1 })
   let seen = 0
   for await (const chunk of stream) {
-    await clock.advance(250)
+    await clock.advance(1000)
     if (chunk.kind === 'text') {
       for (const surface of ['desktop', 'terminal'] as const) {
         expect(await label(surface)).toMatch(/[1-9][0-9.]*k? tok\/s/)
@@ -75,7 +75,7 @@ test('a rate above the usual 95th percentile is red and bold', async ($, on) => 
   await $.session.start({ cwd: '/tmp', surface: 'desktop', isInteractive: true })
   let checked = false
   for await (const chunk of $.turn.step({ turnId: 't1', index: 0, model: 'claude-opus-5-5', messageCount: 1 })) {
-    await clock.advance(250)
+    await clock.advance(1000)
     if (chunk.kind === 'text' && !checked) {
       checked = true
       for (const surface of ['desktop', 'terminal'] as const) {
